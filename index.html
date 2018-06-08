@@ -3,16 +3,37 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Hello Git</title>
+	<link rel="stylesheet" href="styles.css">
 	<script src="jquery-3.2.1.min.js"></script>
-	<script src="formajaxjs.js"></script>
+	<script src="main.js"></script>
 </head>
 <body>
-	<h1>Hello GitHub</h1>
-	<p id="hello">Здраствуйте!</p>
-	<form action="formajaxphp.php" method="GET">
-		<p>Имя: <input type="text" name="name" value=""></p>
-		<p>Фамилия: <input type="text" name="family" value=""></p>
-		<p><input type="submit" value="Представиться"></p>
-	</form>
+	<div class="form_wrapper">
+		<input type="checkbox" name="toggle" id="cust_form" class="toggle_form">
+		<div class="form_container">
+			<label for="cust_form" class="toggle_form">Просто форма</label>
+			<form method="GET">
+				<div class="input_group">
+					<label class="el_l">Имя: </label>
+					<input type="text" class="el_inp" required="required">
+				</div>
+				<div class="input_group">
+					<label class="el_l">E-Mail: </label>
+					<input type="email" class="el_inp" required="required">
+				</div>
+				<div class="input_group">
+					<label class="el_l">Номер: </label>
+					<input type="phone" class="el_inp" required="required" pattern="\d+">
+				</div>
+				<div class="input_group">
+					<label class="el_l">Сообщение: </label>
+					<textarea class="el_inp" required="required"></textarea>
+				</div>
+				<div class="input_group">
+					<input type="submit" class="button" value="Отправить">
+				</div>
+			</form>
+		</div>
+	</div>
 </body>
 </html>

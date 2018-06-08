@@ -1,0 +1,108 @@
+*{
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body{
+	font-family: Arial, sans-serif;
+}
+
+.form_container{
+	width: 350px;
+	overflow: hidden;
+	position: fixed;
+	bottom: 0;
+	right: 50%;
+	transform: translateY(365px);
+	transition: .5s;
+}
+
+.form_container:hover{
+	transform: translateY(355px);
+}
+
+.toggle_form:checked ~ .form_container{
+	transform: translateY(0);
+}
+
+.form_container .toggle_form{
+	user-select: none;
+	display: block;
+	background: purple;
+	color: white;
+	padding: 5px 10px;
+	text-align: center;
+	width: 250px;
+	margin: 0 auto;
+	border-radius: 10px 10px 0 0;
+	cursor: pointer;
+	font-size: 24px;
+}
+
+.toggle_form[type="checkbox"]{
+	display: none;
+}
+
+.form_container form{
+	border: 4px solid purple;
+	border-radius: 10px;
+	padding: 20px;
+}
+
+.form_container form .input_group{
+	width: 80%;
+	margin: 0 auto;
+	margin-bottom: 15px;
+	position: relative;
+	/*border: 1px solid green;*/
+}
+
+.focus .el_l{
+	transform: translateY(-30px);
+	font-size: 14px !important;
+	color: purple !important;
+}
+
+.form_container form .input_group .el_l{
+	font-weight: bold;
+	font-size: 18px;
+	color: gray;
+	position: absolute;
+	line-height: 55px;
+	transition: .5s;
+}
+
+.form_container form .input_group .el_inp{
+	width: 100%;
+	height: 50px;
+	font-size: 20px;
+	color: #575454;
+	border: none;
+	border-bottom: 1px solid purple;
+	outline: none;
+	padding: 8px;
+	position: relative;
+	background: transparent;
+}
+
+.form_container form .input_group textarea{
+	resize: none;
+	height: 100px;
+}
+
+.form_container form .input_group .button{
+	background: purple;
+	border: none;
+	outline: none;
+	padding: 10px;
+	color: white;
+	font-weight: bold;
+	font-size: 15px;
+	margin-left: 25%;
+	cursor: pointer;
+}
+
+.form_container form .input_group .button:hover{
+	opacity: 0.6;
+}
