@@ -15,7 +15,7 @@ spa.shell = (function(){
 	var
 		configMap = {
 			anchor_schema_map: {
-				chat: {open: true, closed: true}
+				chat: {opened: true, closed: true}
 			},
 			main_html: String()
 				+ '<div class="spa-shell-head">'
@@ -28,24 +28,19 @@ spa.shell = (function(){
 					+ '<div class="spa-shell-main-content"></div>'
 				+ '</div>'
 				+ '<div class="spa-shell-foot"></div>'
-				+ '<div class="spa-shell-chat"></div>'
 				+ '<div class="spa-shell-modal"></div>',
 
-			chat_extend_time: 250, //1000,
-			chat_retract_time: 300,
-			chat_extend_height: 450,
-			chat_retract_height: 15,
-			chat_extended_title: 'Щелкните, чтобы свернуть',
-			chat_retracted_title: 'Щелкните, чтобы раскрыть'
+				resize_interval: 200,
 		},
 		stateMap = {
-			$container: null,
+			$container: undefined,
 			anchor_map: {},
-			is_chat_retracted: true
+			resize_idto: undefined
 		},
 		jqueryMap = {},
-
-		copyAnchorMap, setJqueryMap, toggleChat, changeAnchorPart, onHashchange, onClickChat, initModule;
+		copyAnchorMap, setJqueryMap,
+		changeAnchorPart, onHashchange, onResize,
+		setChatAnchor, initModule;
 		//--------- КОНЕЦ ПЕРЕМЕННЫХ В ОБЛАСТИ ВИДИМОСТИ МОДУЛЯ --------
 
 		//----------------- НАЧАЛО СЛУЖЕБНЫХ МЕТОДОВ -------------------
@@ -59,74 +54,9 @@ spa.shell = (function(){
 		// Начало метода DOM /setJqueryMap/
 		setJqueryMap = function(){
 			var $container = stateMap.$container;
-			jqueryMap = {
-				$container: $container,
-				$chat: $container.find('.spa-shell-chat')
-			};
+			jqueryMap = {$container: $container};
 		};
 		// Конец метода DOM /setJqueryMap/
-
-		// Начало метода DOM /toggleChat/
-		// Назначение: свернуть или раскрыть окно чата
-		// Состояние: устанавливает stateMap.is_chat_retracted
-		//	* true - окно свернуто
-		//	* false - окно раскрыто
-		//
-		// Аргументы:
-		//	* do_extend - если true, раскрыть окно; если false - свернуть
-		//	* callback - необязательная функция, которая вызывается в конце
-		//	* анимации
-		// Параметры:
-		//	* chat_extend_time, chat_retract_time
-		//	* chat_extend_height, chat_retract_height
-		// Возвращает: булево значение
-		//	* true - анимация окна чата начата
-		//	* false - анимация окна чата не начата
-		//
-		toggleChat = function(do_extend, callback){
-			var
-				px_chat_ht = jqueryMap.$chat.height(),
-				is_open = px_chat_ht === configMap.chat_extend_height,
-				is_closed = px_chat_ht === configMap.chat_retract_height,
-				is_sliding = !is_open && !is_closed;
-
-			// во избежание гонки
-			if(is_sliding){return false;}
-
-			// Начало раскрытия окна чата
-			if(do_extend){
-				jqueryMap.$chat.animate(
-					{height: configMap.chat_extend_height},
-					configMap.chat_extend_time,
-					function(){
-						jqueryMap.$chat.attr(
-							'title', configMap.chat_extended_title
-						);
-						stateMap.is_chat_retracted = false;
-						if(callback){callback(jq
-							.$chat);}
-					}
-				);
-				return true;
-			}
-			// Конец раскрытия окна чата
-
-			// Начало сворачивания окна чата
-			jqueryMap.$chat.animate(
-				{height: configMap.chat_retract_height},
-				configMap.chat_retract_time,
-				function(){
-					jqueryMap.$chat.attr(
-						'title', configMap.chat_retracted_title
-					);
-					stateMap.is_chat_retracted = true;
-					if(callback){callback(jqueryMap.$chat);}
-				}
-			);
-			return true;
-			// Конец сворачивания окна чата
-		};
-		// Конец метода DOM /toggleChat/
 
 		// Начало метода DOM /changeAnchorPart/
 		// Назначение: изменяет якорь в URI-адресе
@@ -193,6 +123,7 @@ spa.shell = (function(){
 		//--------------------- КОНЕЦ МЕТОДОВ DOM ----------------------
 
 		//---------------- НАЧАЛО ОБРАБОТЧИКОВ СОБЫТИЙ -----------------
+
 		// Начало обработчика события /onHashchange/
 		// Назначение: обрабатывает событие hashchange
 		// Аргументы:
@@ -207,10 +138,10 @@ spa.shell = (function(){
 		//
 		onHashchange = function(event){
 			var
-				anchor_map_previous = copyAnchorMap(),
+				_s_chat_previous, _s_chat_proposed, s_chat_proposed,
 				anchor_map_proposed,
-				_s_chat_previous, _s_chat_proposed,
-				s_chat_proposed;
+				is_ok = true,
+				anchor_map_previous = copyAnchorMap();
 
 			// пытаемся разобрать якорь
 			try{anchor_map_proposed = $.uriAnchor.makeAnchorMap();}
@@ -230,64 +161,108 @@ spa.shell = (function(){
 			){
 				s_chat_proposed = anchor_map_proposed.chat;
 				switch(s_chat_proposed){
-					case 'open':
-						toggleChat(true);
+					case 'opened':
+						is_ok = spa.chat.setSliderPosition('opened');
 					break;
 					case 'closed':
-						toggleChat(false);
+						is_ok = spa.chat.setSliderPosition('closed');
 					break;
 					default:
-						toggleChat(false);
+						is_ok = false;
 						delete anchor_map_proposed.chat;
 						$.uriAnchor.setAnchor(anchor_map_proposed, null, true);
 				}
 			}
 			// Конец изменения компонента Chat
 
+			// Начало восстановления якоря, если не удалось
+			// изменить состояние окна чата
+			if (!is_ok){
+				if (anchor_map_previous){
+					$.uriAnchor.setAnchor(anchor_map_previous, null, true);
+					stateMap.anchor_map = anchor_map_previous;
+				} else {
+					delete anchor_map_proposed.chat;
+					$.uriAnchor.setAnchor(anchor_map_proposed, null, true);
+				}
+				// Конец восстановления якоря, если не удалось изменить
+				// состояние окна чата
+			}
+
 			return false;
 		};
 		// Конец обработчика события /onHashchange/
 
-		onClickChat = function(event){
-			/*toggleChat(stateMap.is_chat_retracted);
-			return false;*/
-
-			/*if(toggleChat(stateMap.is_chat_retracted)){
-				$.uriAnchor.setAnchor({
-					chat: (stateMap.is_chat_retracted ? 'open' : 'closed')
-				});
-				return false;
-			}*/
-
-			changeAnchorPart({
-				chat: (stateMap.is_chat_retracted ? 'open' : 'closed')
-			});
-			return false;
+		// Начало обработчика события /onResize/
+		onResize = function (){
+			if(stateMap.resize_idto){return true;};
+			spa.chat.handleResize();
+			stateMap.resize_idto = setTimeout(
+				function(){stateMap.resize_idto = undefined;},
+				configMap.resize_interval
+			);
+			return true;
 		};
+		// Конец обработчика события /onResize/
+		
 		//----------------- КОНЕЦ ОБРАБОТЧИКОВ СОБЫТИЙ -----------------
+
+		//---------------- НАЧАЛО ОБРАТНЫХ ВЫЗОВОВ -----------------
+		// Начало метода обратного вызова /setChatAnchor/
+		// Пример: setChatAnchor( 'closed' );
+		// Назначение: изменить компонент якоря, относящийся к чату
+		// Аргументы:
+		// * position_type – допустимы значения 'closed' или 'opened'
+		//Действие:
+		// Заменяет параметр 'chat' в якоре указанным значением, если это
+		// возможно.
+		//Возвращает:
+		// * true – часть якоря была обновлена
+		// * false – часть якоря не была обновлена
+		// Исключения: нет
+		//
+		setChatAnchor = function(position_type){
+			return changeAnchorPart({chat: position_type});
+		};
+		// Конец метода обработки обратного вызова /setChatAnchor/
+		//----------------- КОНЕЦ ОБРАТНЫХ ВЫЗОВОВ -----------------
 
 		//------------------- НАЧАЛО ОТКРЫТЫХ МЕТОДОВ ------------------
 		// Начало открытого метода /initModule/
+		// Пример: spa.chat.initModule( $('#div_id') );
+		// Назначение:
+		// Требует, чтобы Chat начал предоставлять свою
+		// функциональность пользователю
+		// Аргументы:
+		// * $append_target (example: $('#div_id')).
+		// Коллекция jQuery, которая должна содержать
+		// единственный элемент DOM – контейнер
+		// Действие:
+		// Добавляет выплывающий чат в конец указанного контейнера и заполняет
+		// его HTML-содержимым. Затем инициализирует элементы, события и
+		// обработчики, так чтобы предоставить пользователю интерфейс для работы
+		// с чатом.
+		// Возвращает: true в случае успеха, иначе false
+		// Исключения: нет
+		//
 		initModule = function($container){
 			// загрузить HTML и кэшировать коллекции jQuery
 			stateMap.$container = $container;
 			$container.html(configMap.main_html);
 			setJqueryMap();
 
-			/*// тестировать переключение
-			setTimeout(function(){toggleChat(true);}, 3000);
-			setTimeout(function(){toggleChat(false);}, 8000);*/
-
-			// инициализировать окно чата и привязать обработчик щелчка
-			stateMap.is_chat_retracted = true;
-			jqueryMap.$chat
-				.attr('title', configMap.chat_retracted_title)
-				.click(onClickChat);
-
 			// настраиваем uriAnchor на использование нашей схемы
 			$.uriAnchor.configModule({
 				schema_map: configMap.anchor_schema_map
 			});
+
+			// настраиваем и инициализируем функциональные модули
+			spa.chat.configModule({
+				set_chat_anchor: setChatAnchor,
+				chat_model: spa.model.chat,
+				people_model: spa.model.people
+			});
+			spa.chat.initModule(jqueryMap.$container);
 
 			// Обрабатываем события изменения якоря в URI.
 			// Это делается /после/ того, как все функциональные модули
@@ -296,6 +271,7 @@ spa.shell = (function(){
 			// учет якоря при загрузке.
 			//
 			$(window)
+				.bind('resize', onResize)
 				.bind('hashchange', onHashchange)
 				.trigger('hashchange');
 		};
