@@ -286,13 +286,19 @@ spa.shell = (function(){
 				schema_map: configMap.anchor_schema_map
 			});
 
-			// настраиваем и инициализируем функциональные модули
+			// сконфигурировать и инициализировать функциональные модули
 			spa.chat.configModule({
 				set_chat_anchor: setChatAnchor,
 				chat_model: spa.model.chat,
 				people_model: spa.model.people
 			});
 			spa.chat.initModule(jqueryMap.$container);
+
+			spa.avtr.configModule({
+				chat_model: spa.model.chat,
+				people_model: spa.model.people
+			});
+			spa.avtr.initModule(jqueryMap.$nav);
 
 			// Обрабатываем события изменения якоря в URI.
 			// Это делается /после/ того, как все функциональные модули
